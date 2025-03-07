@@ -1,6 +1,7 @@
 // routes/issueRoutes.js
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const { check, validationResult } = require('express-validator');
 const authMiddleware = require('../middleware/auth');
 const Issue = require('../models/issueModel');
