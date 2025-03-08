@@ -15,6 +15,10 @@ const issueRoutes = require('./routes/issueRoutes');
 const userRoutes = require('./routes/userRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const analyticsRoutes = require('./routes/analytics');
+const exportRoutes = require('./routes/export');
+const categoryRoutes = require('./routes/categories');
+const profileRoutes = require('./routes/profile');
 
 // Import database connection
 const connectDB = require('./config/db');
