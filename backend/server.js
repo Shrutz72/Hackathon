@@ -20,6 +20,11 @@ const exportRoutes = require('./routes/export');
 const categoryRoutes = require('./routes/categories');
 const profileRoutes = require('./routes/profile');
 
+
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/profile', profileRoutes);
 // Import database connection
 const connectDB = require('./config/db');
 
