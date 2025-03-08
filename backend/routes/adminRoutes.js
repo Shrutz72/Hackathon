@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
-const User = require('../models/User');
-const Report = require('../models/Report');
-const Category = require('../models/Category');
-const Notification = require('../models/Notification');
+const User = require('../models/userModel');
+const Report = require('../models/reportModel');
+const Category = require('../models/categoryModel');
+const Notification = require('../models/notificationModel');
 const { check, validationResult } = require('express-validator');
 
 // Apply admin middleware to all routes

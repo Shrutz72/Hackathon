@@ -1,4 +1,3 @@
-// config/cloudStorage.js
 const mongoose = require('mongoose');
 const multer = require('multer');
 const { GridFsStorage } = require('multer-gridfs-storage');
@@ -12,7 +11,7 @@ const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/community-i
 // Create mongoose connection
 const conn = mongoose.createConnection(mongoURI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
 });
 
 // Initialize global variables
@@ -22,7 +21,7 @@ let gfs;
 conn.once('open', () => {
   // Initialize GridFS stream
   gfs = new mongoose.mongo.GridFSBucket(conn.db, {
-    bucketName: 'uploads'
+    bucketName: 'uploads',
   });
   console.log('GridFS connection successfully established');
 });
@@ -38,7 +37,7 @@ const storage = new GridFsStorage({
         if (err) {
           return reject(err);
         }
-        
+
         const filename = buf.toString('hex') + path.extname(file.originalname);
         const fileInfo = {
           filename: filename,
@@ -50,18 +49,18 @@ const storage = new GridFsStorage({
             uploadDate: new Date(),
             issueId: req.body.issueId || null,
             category: req.body.category || 'uncategorized',
-            geoLocation: req.body.location || null
-          }
+            geoLocation: req.body.location || null,
+          },
         };
-        
+
         resolve(fileInfo);
       });
     });
-  }
+  },
 });
 
 // Create the multer upload middleware with the storage configuration
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10MB
   fileFilter: (req, file, cb) => {
@@ -69,12 +68,12 @@ const upload = multer({
     const filetypes = /jpeg|jpg|png|gif|pdf/;
     const mimetype = filetypes.test(file.mimetype);
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    
+
     if (mimetype && extname) {
       return cb(null, true);
     }
     cb(new Error('Error: Only images and PDF files are allowed!'));
-  }
+  },
 });
 
 // Function to retrieve a file by filename
@@ -84,11 +83,11 @@ const getFileByFilename = (filename) => {
       if (err) {
         return reject(err);
       }
-      
+
       if (!files || files.length === 0) {
         return reject(new Error('File not found'));
       }
-      
+
       resolve(files[0]);
     });
   });
@@ -106,11 +105,11 @@ const deleteFile = (filename) => {
       if (err) {
         return reject(err);
       }
-      
+
       if (!files || files.length === 0) {
         return reject(new Error('File not found'));
       }
-      
+
       const fileId = files[0]._id;
       gfs.delete(fileId, (err) => {
         if (err) {
@@ -129,21 +128,22 @@ const getFilesByIssueId = (issueId) => {
       if (err) {
         return reject(err);
       }
-      
+
       if (!files || files.length === 0) {
         return resolve([]);
       }
-      
+
       resolve(files);
     });
   });
 };
 
+// Export all functions and variables
 module.exports = {
   upload,
   getFileByFilename,
   createReadStream,
   deleteFile,
   getFilesByIssueId,
-  connection: conn
+  connection: conn,
 };
