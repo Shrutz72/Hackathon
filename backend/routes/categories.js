@@ -1,6 +1,7 @@
 // routes/categories.js
 const express = require('express');
 const router = express.Router();
+
 const Issue = require('../models/issueModel');
 
 // @route   GET /api/categories
@@ -47,6 +48,7 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('Error in POST /categories:', err.message);
     res.status(500).send('Server Error');
+
   }
 });
 

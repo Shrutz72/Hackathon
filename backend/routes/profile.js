@@ -1,6 +1,7 @@
 // routes/profile.js
 const express = require('express');
 const router = express.Router();
+
 const User = require('../models/userModel');
 const authMiddleware = require('../middleware/auth');
 
@@ -38,6 +39,7 @@ router.put('/', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error in PUT /profile:', err.message);
     res.status(500).send('Server Error');
+
   }
 });
 

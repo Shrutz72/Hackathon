@@ -32,6 +32,7 @@ router.get('/issues', async (req, res) => {
   } catch (err) {
     console.error('Error in GET /export/issues:', err.message);
     res.status(500).send('Server Error');
+
   }
 });
 

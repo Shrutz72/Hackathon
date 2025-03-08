@@ -94,6 +94,7 @@ router.get('/resolution-time', async (req, res) => {
   } catch (err) {
     console.error('Error in GET /analytics/resolution-time:', err.message);
     res.status(500).send('Server Error');
+
   }
 });
 
