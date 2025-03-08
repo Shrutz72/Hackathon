@@ -2,17 +2,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const Schema = mongoose.Schema;
 
-
-notificationSettings: {
-  emailNotifications: { type: Boolean, default: true },
-  pushNotifications: { type: Boolean, default: true },
-  notifyOnComments: { type: Boolean, default: true },
-  notifyOnStatusChange: { type: Boolean, default: true },
-  notifyOnNearbyIssues: { type: Boolean, default: true }
-},
-fcmToken: { type: String },
-followedIssues: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Issue' }]
-
 const userSchema = new Schema({
   username: {
     type: String,
@@ -148,19 +137,21 @@ const userSchema = new Schema({
       }
     }
   },
+  // Add the misplaced fields here
+  notificationSettings: {
+    emailNotifications: { type: Boolean, default: true },
+    pushNotifications: { type: Boolean, default: true },
+    notifyOnComments: { type: Boolean, default: true },
+    notifyOnStatusChange: { type: Boolean, default: true },
+    notifyOnNearbyIssues: { type: Boolean, default: true }
+  },
+  fcmToken: { type: String },
+  followedIssues: [{ type: Schema.Types.ObjectId, ref: 'Issue' }],
   lastActive: {
     type: Date,
     default: Date.now
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
-}, { timestamps: true });
+}, { timestamps: true }); // This will automatically handle createdAt and updatedAt
 
 // Index for geospatial queries
 userSchema.index({ "location.coordinates": "2dsphere" });
