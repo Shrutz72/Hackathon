@@ -19,6 +19,7 @@ const analyticsRoutes = require('./routes/analytics');
 const exportRoutes = require('./routes/export');
 const categoryRoutes = require('./routes/categories');
 const profileRoutes = require('./routes/profile');
+const authRoutes = require('./routes/auth');
 
 
 app.use('/api/analytics', analyticsRoutes);
@@ -33,6 +34,12 @@ connectDB();
 
 // Initialize Express app
 const app = express();
+
+// server.js
+const authRoutes = require('./routes/auth'); // Add this line
+
+// Routes
+app.use('/api/auth', authRoutes); // Add this line
 
 // Set up security and utility middleware
 app.use(helmet());

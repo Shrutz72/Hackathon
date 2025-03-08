@@ -83,7 +83,7 @@ exports.reportIssueRules = [
     .custom(async (value) => {
       try {
         // Check if category exists in the database
-        const Category = require('../models/Category');
+        const Category = require('../models/category');
         const category = await Category.findById(value);
         
         if (!category) {
@@ -241,7 +241,7 @@ exports.searchIssueRules = [
     .custom(async (value) => {
       try {
         // Check if category exists
-        const Category = require('../models/Category');
+        const Category = require('../models/category');
         const category = await Category.findById(value);
         
         if (!category) {
