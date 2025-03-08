@@ -3,9 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Issue = require('../models/Issue');
 const User = require('../models/User');
-const Reward = require('../models/Reward');
 const auth = require('../middleware/auth');
-const roleCheck = require('../middleware/roleCheck');
 
 // Get community impact metrics
 router.get('/impact', auth, async (req, res) => {
@@ -24,9 +22,6 @@ router.get('/impact', auth, async (req, res) => {
       reportedIssues: { $exists: true, $not: { $size: 0 } } 
     });
     
-    const totalPointsAwarded = await User.aggregate([
-      { $group: { _id: null, totalPoints: { $sum: '$points' } } }
-    ]);
     
     const avgResolutionTime = await Issue.aggregate([
       { $match: { status: 'resolved' } },
