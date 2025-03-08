@@ -2,6 +2,17 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const Schema = mongoose.Schema;
 
+
+notificationSettings: {
+  emailNotifications: { type: Boolean, default: true },
+  pushNotifications: { type: Boolean, default: true },
+  notifyOnComments: { type: Boolean, default: true },
+  notifyOnStatusChange: { type: Boolean, default: true },
+  notifyOnNearbyIssues: { type: Boolean, default: true }
+},
+fcmToken: { type: String },
+followedIssues: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Issue' }]
+
 const userSchema = new Schema({
   username: {
     type: String,
