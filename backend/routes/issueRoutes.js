@@ -8,6 +8,7 @@ const Issue = require('../models/issueModel');
 const User = require('../models/userModel');
 const { upload } = require('../config/cloudStorage');
 const { getFilesByIssueId, deleteFile } = require('../config/cloudStorage');
+
 //route   GET /api/issues
 // @desc    Get all issues with pagination, filtering and sorting
 // @access  Public
@@ -134,24 +135,23 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/issues
 // @desc    Create a new issue
 // @access  Private
+console.log(upload.array('photos', 5)); // Should log a function
 router.post(
   '/',
+  authMiddleware,
+  upload.array('photos', 5), // Ensure this is a function
   [
-    authMiddleware,
-    upload.array('photos', 5), // Allow up to 5 photos
-    [
-      check('title', 'Title is required').not().isEmpty(),
-      check('description', 'Description is required').not().isEmpty(),
-      check('category', 'Category is required').not().isEmpty(),
-      check('location', 'Location information is required').not().isEmpty()
-    ]
+    check('title', 'Title is required').not().isEmpty(),
+    check('description', 'Description is required').not().isEmpty(),
+    check('category', 'Category is required').not().isEmpty(),
+    check('location', 'Location information is required').not().isEmpty(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    
+
     try {
       // Parse location data
       let location;
@@ -160,7 +160,7 @@ router.post(
       } catch (err) {
         return res.status(400).json({ msg: 'Invalid location format' });
       }
-      
+
       // Create new issue
       const newIssue = new Issue({
         title: req.body.title,
@@ -172,25 +172,26 @@ router.post(
         location: {
           type: 'Point',
           coordinates: [location.longitude, location.latitude],
-          address: location.address
-        }
+          address: location.address,
+        },
       });
-      
+
       // Save the issue
       const issue = await newIssue.save();
-      
+
       // If files were uploaded, update their metadata with the issue ID
       if (req.files && req.files.length > 0) {
-        // Files are already uploaded by multer, we just need to update them
-        // with the new issue ID in cloudStorage.js middleware
+        for (const file of req.files) {
+          await gfs.files.updateOne(
+            { filename: file.filename },
+            { $set: { 'metadata.issueId': issue._id } }
+          );
+        }
       }
-      
+
       // Increment user's reportCount (for gamification)
-      await User.findByIdAndUpdate(
-        req.user.id,
-        { $inc: { reportCount: 1 } }
-      );
-      
+      await User.findByIdAndUpdate(req.user.id, { $inc: { reportCount: 1 } });
+
       res.json(issue);
     } catch (err) {
       console.error('Error in POST /issues:', err.message);
@@ -198,37 +199,33 @@ router.post(
     }
   }
 );
-
 // @route   PUT /api/issues/:id
 // @desc    Update an issue
 // @access  Private
 router.put(
   '/:id',
+  authMiddleware,
+  upload.array('photos', 5), // Ensure this is a function
   [
-    authMiddleware,
-    upload.array('photos', 5), // Allow up to 5 photos
-    [
-      check('title', 'Title is required').optional(),
-      check('description', 'Description is required').optional(),
-      check('category', 'Category is required').optional(),
-      check('status', 'Status is required').optional()
-    ]
+    check('title').optional(),
+    check('description').optional(),
+    check('category').optional(),
+    check('status').optional(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    
+
     try {
       const issue = await Issue.findById(req.params.id);
-      
+
       if (!issue) {
         return res.status(404).json({ msg: 'Issue not found' });
       }
-      
+
       // Check if user is authorized to update this issue
-      // Allow if user is the reporter or an admin/moderator
       if (
         issue.reportedBy.toString() !== req.user.id &&
         req.user.role !== 'admin' &&
@@ -236,7 +233,7 @@ router.put(
       ) {
         return res.status(401).json({ msg: 'Not authorized to update this issue' });
       }
-      
+
       // Build issue update object
       const issueFields = {};
       if (req.body.title) issueFields.title = req.body.title;
@@ -245,20 +242,20 @@ router.put(
       if (req.body.priority) issueFields.priority = req.body.priority;
       if (req.body.status) {
         issueFields.status = req.body.status;
-        
+
         // If status changed to 'resolved', set resolvedAt timestamp
         if (req.body.status === 'resolved' && issue.status !== 'resolved') {
           issueFields.resolvedAt = Date.now();
         }
-        
+
         // If status changed to 'closed', set closedAt timestamp
         if (req.body.status === 'closed' && issue.status !== 'closed') {
           issueFields.closedAt = Date.now();
         }
       }
-      
+
       if (req.body.assignedTo) issueFields.assignedTo = req.body.assignedTo;
-      
+
       // Check if location is being updated
       if (req.body.location) {
         try {
@@ -266,61 +263,61 @@ router.put(
           issueFields.location = {
             type: 'Point',
             coordinates: [location.longitude, location.latitude],
-            address: location.address
+            address: location.address,
           };
         } catch (err) {
           return res.status(400).json({ msg: 'Invalid location format' });
         }
       }
-      
+
       // Update timestamp
       issueFields.updatedAt = Date.now();
-      
+
       // Track history of updates
       const updateEntry = {
         updatedBy: req.user.id,
         updatedAt: Date.now(),
-        changes: {}
+        changes: {},
       };
-      
+
       // Record changes for history
       for (const [key, value] of Object.entries(issueFields)) {
         if (key !== 'updatedAt' && issue[key] !== value) {
           updateEntry.changes[key] = {
             from: issue[key],
-            to: value
+            to: value,
           };
         }
       }
-      
+
       // Only add to history if there are actual changes
       if (Object.keys(updateEntry.changes).length > 0) {
         issue.updateHistory.push(updateEntry);
       }
-      
+
       // Update the issue
       const updatedIssue = await Issue.findByIdAndUpdate(
         req.params.id,
         { $set: issueFields, updateHistory: issue.updateHistory },
         { new: true }
-      ).populate('reportedBy', 'name avatar')
-       .populate('assignedTo', 'name avatar');
-      
+      )
+        .populate('reportedBy', 'name avatar')
+        .populate('assignedTo', 'name avatar');
+
       // If files were uploaded, they're already handled by multer middleware
-      
+
       res.json(updatedIssue);
     } catch (err) {
       console.error('Error in PUT /issues/:id:', err.message);
-      
+
       if (err.kind === 'ObjectId') {
         return res.status(404).json({ msg: 'Issue not found' });
       }
-      
+
       res.status(500).send('Server Error');
     }
   }
 );
-
 // @route   DELETE /api/issues/:id
 // @desc    Delete an issue
 // @access  Private
@@ -403,10 +400,8 @@ router.post('/:id/upvote', authMiddleware, async (req, res) => {
 // @access  Private
 router.post(
   '/:id/comments',
-  [
-    authMiddleware,
-    [check('text', 'Comment text is required').not().isEmpty()]
-  ],
+  authMiddleware,
+  check('text', 'Comment text is required').not().isEmpty(),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

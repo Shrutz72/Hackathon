@@ -1,87 +1,54 @@
 // routes/categories.js
 const express = require('express');
 const router = express.Router();
-const Category = require('../models/category');
-const auth = require('../middleware/auth');
-const roleCheck = require('../middleware/roleCheck');
 
-// Get all categories
+const Issue = require('../models/issueModel');
+
+// @route   GET /api/categories
+// @desc    Get all categories
+// @access  Public
 router.get('/', async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true }).sort('name');
-    res.json({ success: true, data: categories });
+    const categories = await Issue.distinct('category');
+    res.json(categories);
   } catch (err) {
-    console.error('Error fetching categories:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Error in GET /categories:', err.message);
+    res.status(500).send('Server Error');
   }
 });
 
-// Create new category (admin only)
-router.post('/', [auth, roleCheck(['admin'])], async (req, res) => {
+// @route   POST /api/categories
+// @desc    Create a new category
+// @access  Private (Admin only)
+router.post('/', async (req, res) => {
   try {
-    const { name, description, icon, color } = req.body;
-    
+    const { category } = req.body;
+
+    if (!category) {
+      return res.status(400).json({ msg: 'Category is required' });
+    }
+
     // Check if category already exists
-    let category = await Category.findOne({ name });
-    if (category) {
-      return res.status(400).json({ success: false, message: 'Category already exists' });
+    const existingCategory = await Issue.findOne({ category });
+    if (existingCategory) {
+      return res.status(400).json({ msg: 'Category already exists' });
     }
-    
-    category = new Category({
-      name,
-      description,
-      icon,
-      color
+
+    // Add category to an issue (for demonstration)
+    const newIssue = new Issue({
+      title: 'Sample Issue',
+      description: 'This is a sample issue for the new category',
+      category,
+      reportedBy: req.user.id,
     });
-    
-    await category.save();
-    
-    res.status(201).json({ success: true, data: category });
-  } catch (err) {
-    console.error('Error creating category:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
 
-// Update category (admin only)
-router.put('/:id', [auth, roleCheck(['admin'])], async (req, res) => {
-  try {
-    const { name, description, icon, color, isActive } = req.body;
-    
-    const category = await Category.findByIdAndUpdate(
-      req.params.id,
-      { name, description, icon, color, isActive },
-      { new: true }
-    );
-    
-    if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
-    }
-    
-    res.json({ success: true, data: category });
-  } catch (err) {
-    console.error('Error updating category:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
+    await newIssue.save();
 
-// Delete category (admin only) - soft delete by setting isActive to false
-router.delete('/:id', [auth, roleCheck(['admin'])], async (req, res) => {
-  try {
-    const category = await Category.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
-    
-    if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
-    }
-    
-    res.json({ success: true, message: 'Category removed successfully' });
+    res.json({ msg: 'Category created successfully', category });
   } catch (err) {
-    console.error('Error removing category:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Error in POST /categories:', err.message);
+    res.status(500).send('Server Error');
+
   }
 });
 

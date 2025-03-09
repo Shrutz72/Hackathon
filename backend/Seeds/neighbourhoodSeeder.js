@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Neighbourhood = require('../models/Neighbourhood'); // Assuming you have a Neighbourhood model
+const Neighbourhood = require('../models/neighbourhoodModel'); // Assuming you have a Neighbourhood model
 
 // Connect to MongoDB
 const connectDB = async () => {

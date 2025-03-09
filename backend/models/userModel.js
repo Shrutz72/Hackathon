@@ -150,8 +150,27 @@ const userSchema = new Schema({
   lastActive: {
     type: Date,
     default: Date.now
-  }
-}, { timestamps: true }); // This will automatically handle createdAt and updatedAt
+
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  },
+  notificationSettings: {
+    emailNotifications: { type: Boolean, default: true },
+    pushNotifications: { type: Boolean, default: true },
+    notifyOnComments: { type: Boolean, default: true },
+    notifyOnStatusChange: { type: Boolean, default: true },
+    notifyOnNearbyIssues: { type: Boolean, default: true }
+  },
+  fcmToken: { type: String },
+  followedIssues: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Issue' }]
+}, { timestamps: true });
+
 
 // Index for geospatial queries
 userSchema.index({ "location.coordinates": "2dsphere" });

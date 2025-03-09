@@ -1,99 +1,100 @@
 // routes/analytics.js
 const express = require('express');
 const router = express.Router();
-const Issue = require('../models/Issue');
-const User = require('../models/User');
-const auth = require('../middleware/auth');
+const Issue = require('../models/issueModel');
 
-// Get community impact metrics
-router.get('/impact', auth, async (req, res) => {
+// @route   GET /api/analytics/categories
+// @desc    Get issue statistics by category
+// @access  Public
+router.get('/categories', async (req, res) => {
   try {
-    const totalIssuesReported = await Issue.countDocuments();
-    const resolvedIssues = await Issue.countDocuments({ status: 'resolved' });
-    const resolutionRate = totalIssuesReported > 0 ? (resolvedIssues / totalIssuesReported * 100).toFixed(2) : 0;
-    
-    const topCategories = await Issue.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
+    const stats = await Issue.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 },
+          resolved: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'resolved'] }, 1, 0],
+            },
+          },
+          inProgress: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'inProgress'] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          category: '$_id',
+          count: 1,
+          resolved: 1,
+          inProgress: 1,
+          resolutionRate: {
+            $multiply: [{ $divide: ['$resolved', '$count'] }, 100],
+          },
+          _id: 0,
+        },
+      },
     ]);
-    
-    const activeUsers = await User.countDocuments({ 
-      reportedIssues: { $exists: true, $not: { $size: 0 } } 
-    });
-    
-    
-    const avgResolutionTime = await Issue.aggregate([
-      { $match: { status: 'resolved' } },
-      { $project: {
-        resolutionTime: {
-          $subtract: [
-            { $arrayElemAt: [
-              '$statusHistory.timestamp',
-              { $indexOfArray: ['$statusHistory.status', 'resolved'] }
-            ]},
-            '$createdAt'
-          ]
-        }
-      }},
-      { $group: {
-        _id: null,
-        avgTime: { $avg: '$resolutionTime' }
-      }}
-    ]);
-    
-    res.json({
-      success: true,
-      data: {
-        totalIssuesReported,
-        resolvedIssues,
-        resolutionRate: `${resolutionRate}%`,
-        activeUsers,
-        topCategories,
-        totalPointsAwarded: totalPointsAwarded.length > 0 ? totalPointsAwarded[0].totalPoints : 0,
-        avgResolutionTime: avgResolutionTime.length > 0 ? Math.floor(avgResolutionTime[0].avgTime / (1000 * 60 * 60 * 24)) : 0 // in days
-      }
-    });
+
+    res.json(stats);
   } catch (err) {
-    console.error('Error fetching analytics:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Error in GET /analytics/categories:', err.message);
+    res.status(500).send('Server Error');
   }
 });
 
-// Get user participation stats
-router.get('/user-stats', auth, async (req, res) => {
+// @route   GET /api/analytics/resolution-time
+// @desc    Get average resolution time statistics
+// @access  Public
+router.get('/resolution-time', async (req, res) => {
   try {
-    const userStats = await User.findById(req.user.id)
-      .select('reportedIssues upvotedIssues rewards points')
-      .populate('reportedIssues', 'status title createdAt')
-      .lean();
-    
-    // Calculate resolution rate of user's reported issues
-    const resolvedIssues = userStats.reportedIssues.filter(issue => issue.status === 'resolved').length;
-    const resolutionRate = userStats.reportedIssues.length > 0 ? 
-      (resolvedIssues / userStats.reportedIssues.length * 100).toFixed(2) : 0;
-    
-    // Calculate user rank percentile
-    const higherPointUsers = await User.countDocuments({ points: { $gt: userStats.points } });
-    const totalUsers = await User.countDocuments();
-    const percentile = totalUsers > 0 ? 
-      (100 - ((higherPointUsers / totalUsers) * 100)).toFixed(2) : 0;
-    
-    res.json({
-      success: true,
-      data: {
-        issuesReported: userStats.reportedIssues.length,
-        issuesResolved: resolvedIssues,
-        resolutionRate: `${resolutionRate}%`,
-        upvotes: userStats.upvotedIssues.length,
-        rewardsRedeemed: userStats.rewards.length,
-        points: userStats.points,
-        percentile: `${percentile}%`
-      }
-    });
+    const stats = await Issue.aggregate([
+      {
+        $match: {
+          status: 'resolved',
+          resolvedAt: { $exists: true },
+        },
+      },
+      {
+        $project: {
+          category: 1,
+          resolutionTime: {
+            $divide: [
+              { $subtract: ['$resolvedAt', '$createdAt'] },
+              1000 * 60 * 60 * 24, // Convert ms to days
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$category',
+          averageResolutionDays: { $avg: '$resolutionTime' },
+          minResolutionDays: { $min: '$resolutionTime' },
+          maxResolutionDays: { $max: '$resolutionTime' },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          category: '$_id',
+          averageResolutionDays: { $round: ['$averageResolutionDays', 1] },
+          minResolutionDays: { $round: ['$minResolutionDays', 1] },
+          maxResolutionDays: { $round: ['$maxResolutionDays', 1] },
+          count: 1,
+          _id: 0,
+        },
+      },
+    ]);
+
+    res.json(stats);
   } catch (err) {
-    console.error('Error fetching user stats:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Error in GET /analytics/resolution-time:', err.message);
+    res.status(500).send('Server Error');
+
   }
 });
 

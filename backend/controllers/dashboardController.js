@@ -1,7 +1,7 @@
-const Issue = require('../models/Issue');
-const User = require('../models/User');
-const Community = require('../models/Community');
-const Project = require('../models/Project');
+const Issue = require('../models/issueModel');
+const User = require('../models/userModel');
+const Community = require('../models/communityModel');
+const Project = require('../models/projectModel');
 const mongoose = require('mongoose');
 const { StatusCodes } = require('http-status-codes');
 

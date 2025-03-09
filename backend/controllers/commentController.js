@@ -1,6 +1,6 @@
-const Comment = require('../models/Comment');
-const Report = require('../models/Report');
-const User = require('../models/User');
+const Comment = require('../models/commentModel');
+const Report = require('../models/reportModel');
+const User = require('../models/userModel');
 const { validationResult } = require('express-validator');
 
 // Add a comment to a report
